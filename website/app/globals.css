@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+/* ==============================
+   Global Theme Variables
+============================== */
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+
+  --surface: #ffffff;
+  --surface-muted: #f1f5f9;
+
+  --border: #e2e8f0;
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+
+  --muted: #64748b;
+
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+}
+
+/* ==============================
+   Tailwind Theme Integration
+============================== */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ==============================
+   Base Document
+============================== */
+
+html {
+  min-height: 100%;
+  background: var(--background);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+
+  margin: 0;
+
+  background: var(--background);
+  color: var(--foreground);
+
+  font-family:
+    var(--font-geist-sans),
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ==============================
+   Box Sizing
+============================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ==============================
+   Text Selection
+============================== */
+
+::selection {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+/* ==============================
+   Links
+============================== */
+
+a {
+  text-decoration: none;
+}
+
+/* ==============================
+   Form Elements
+============================== */
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* ==============================
+   Input Styling
+============================== */
+
+input,
+textarea,
+select {
+  color: #0f172a;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* ==============================
+   Autofill Fix
+============================== */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0f172a;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* ==============================
+   Focus Accessibility
+============================== */
+
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* ==============================
+   Images
+============================== */
+
+img,
+svg {
+  display: block;
+}
+
+/* ==============================
+   Scrollbar
+============================== */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

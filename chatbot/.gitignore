@@ -1,0 +1,40 @@
+# ==============================
+# Dependencies
+# ==============================
+
+node_modules/
+
+# ==============================
+# Environment / Secrets
+# ==============================
+
+# Firebase Admin credentials
+nura-health-679c9-firebase-adminsdk-fbsvc-185068d812.json
+*-firebase-adminsdk-*.json
+
+# Environment variables
+.env
+.env.local
+
+# Dependencies
+node_modules/
+
+# Build output
+
+dist/
+.env
+.env.*
+!.env.example
+
+# ==============================
+# Build
+# ==============================
+
+dist/
+
+# ==============================
+# OS / Editor
+# ==============================
+
+.DS_Store
+*.log
