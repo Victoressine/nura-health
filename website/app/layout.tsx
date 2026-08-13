@@ -2,8 +2,15 @@
 // Imports
 // ==============================
 
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type {
+  Metadata,
+  Viewport,
+} from "next";
+
+import {
+  Geist,
+  Geist_Mono,
+} from "next/font/google";
 
 import "./globals.css";
 
@@ -27,9 +34,26 @@ const geistMono = Geist_Mono({
 // Site Configuration
 // ==============================
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-  "http://localhost:3000";
+function getSiteUrl(): string {
+  const configuredUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim();
+
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/$/, "");
+  }
+
+  const vercelUrl =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
+    process.env.VERCEL_URL?.trim();
+
+  if (vercelUrl) {
+    return `https://${vercelUrl.replace(/\/$/, "")}`;
+  }
+
+  return "http://localhost:3000";
+}
+
+const siteUrl = getSiteUrl();
 
 // ==============================
 // Metadata
@@ -57,7 +81,7 @@ export const metadata: Metadata = {
   applicationName: "Nura Health",
 
   // ==============================
-  // Branding / Icons
+  // Branding
   // ==============================
 
   icons: {
@@ -68,10 +92,11 @@ export const metadata: Metadata = {
       },
     ],
 
-    shortcut: [
+    shortcut: "/nura-logo.webp",
+
+    apple: [
       {
         url: "/nura-logo.webp",
-        type: "image/webp",
       },
     ],
   },
@@ -83,9 +108,9 @@ export const metadata: Metadata = {
   keywords: [
     "Nura Health",
     "personal health",
-    "health assessments",
-    "appointments",
+    "health assessment",
     "health records",
+    "medical appointments",
     "AI health assistant",
     "health management",
   ],
@@ -123,7 +148,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
 
-    url: "/",
+    url: siteUrl,
 
     siteName: "Nura Health",
 
@@ -135,7 +160,7 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/nura-logo.webp",
-        alt: "Nura Health logo",
+        alt: "Nura Health",
       },
     ],
   },
@@ -171,6 +196,18 @@ export const metadata: Metadata = {
 };
 
 // ==============================
+// Viewport
+// ==============================
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+
+  themeColor: "#ffffff",
+};
+
+// ==============================
 // Root Layout
 // ==============================
 
@@ -183,7 +220,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
         {children}
