@@ -65,6 +65,15 @@ export default function DashboardPage() {
         setError("");
 
         // ==============================
+        // Production Diagnostics
+        // ==============================
+
+        console.info("Nura Firebase session", {
+          uid: user.uid,
+          email: user.email,
+          projectId: auth.app.options.projectId,
+        });
+        // ==============================
         // Load main user profile
         // ==============================
 
@@ -192,60 +201,60 @@ export default function DashboardPage() {
       {/* ==============================
           Overview cards
       ============================== */}
-<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard
-        title="Health profile"
-        value={healthProfileComplete ? "Complete" : "Setup"}
-        helper={
-          healthProfileComplete
-            ? "Your health profile is available"
-            : "Complete your personal health details"
-        }
-        icon={Activity}
-        href="/dashboard/profile"
-      />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          title="Health profile"
+          value={healthProfileComplete ? "Complete" : "Setup"}
+          helper={
+            healthProfileComplete
+              ? "Your health profile is available"
+              : "Complete your personal health details"
+          }
+          icon={Activity}
+          href="/dashboard/profile"
+        />
 
-      <StatCard
-        title="Assessments"
-        value={assessmentCount.toString()}
-        helper={
-          assessmentCount === 0
-            ? "No assessments recorded yet"
-            : `${assessmentCount} assessment${
-                assessmentCount === 1 ? "" : "s"
-              } saved`
-        }
-        icon={ClipboardPlus}
-        href="/dashboard/assessment"
-      />
+        <StatCard
+          title="Assessments"
+          value={assessmentCount.toString()}
+          helper={
+            assessmentCount === 0
+              ? "No assessments recorded yet"
+              : `${assessmentCount} assessment${
+                  assessmentCount === 1 ? "" : "s"
+                } saved`
+          }
+          icon={ClipboardPlus}
+          href="/dashboard/assessment"
+        />
 
-      <StatCard
-        title="Appointments"
-        value={appointmentCount.toString()}
-        helper={
-          appointmentCount === 0
-            ? "No appointments recorded"
-            : `${appointmentCount} appointment${
-                appointmentCount === 1 ? "" : "s"
-              } recorded`
-        }
-        icon={CalendarDays}
-        href="/dashboard/appointments"
-      />
+        <StatCard
+          title="Appointments"
+          value={appointmentCount.toString()}
+          helper={
+            appointmentCount === 0
+              ? "No appointments recorded"
+              : `${appointmentCount} appointment${
+                  appointmentCount === 1 ? "" : "s"
+                } recorded`
+          }
+          icon={CalendarDays}
+          href="/dashboard/appointments"
+        />
 
-      <StatCard
-        title="Health records"
-        value={recordCount.toString()}
-        helper={
-          recordCount === 0
-            ? "No records saved yet"
-            : `${recordCount} health record${
-                recordCount === 1 ? "" : "s"
-              } available`
-        }
-        icon={FileText}
-        href="/dashboard/records"
-      />
+        <StatCard
+          title="Health records"
+          value={recordCount.toString()}
+          helper={
+            recordCount === 0
+              ? "No records saved yet"
+              : `${recordCount} health record${
+                  recordCount === 1 ? "" : "s"
+                } available`
+          }
+          icon={FileText}
+          href="/dashboard/records"
+        />
       </div>
       {/* ==============================
           Main dashboard grid
