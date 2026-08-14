@@ -52,13 +52,17 @@ const INITIAL_MESSAGE: ChatMessage = {
     "Hi, I’m Nura AI. I can provide general health guidance and help you think through symptoms. I do not replace a doctor or emergency service.",
 };
 
-/// ==============================
+// ==============================
 // Chatbot API Configuration
 // ==============================
 
-const CHATBOT_API_URL = process.env.NEXT_PUBLIC_CHATBOT_API_URL?.trim() ?? "";
+const CHATBOT_API_URL =
+  process.env.NEXT_PUBLIC_CHATBOT_API_URL
+    ?.trim()
+    .replace(/\/+$/, "") ?? "";
 
-const chatbotConfigured = CHATBOT_API_URL.length > 0;
+const chatbotConfigured =
+  CHATBOT_API_URL.length > 0;
 const MAX_MESSAGE_LENGTH = 2000;
 
 const REQUEST_TIMEOUT_MS = 90_000;
@@ -207,10 +211,25 @@ export default function NuraChatWidget() {
       return;
     }
 
-    const user = auth.currentUser;
+    const user =
+      auth.currentUser;
 
     if (!user) {
-      setError("Please sign in to use Nura AI.");
+      setError(
+        "Please sign in to use Nura AI."
+      );
+
+      return;
+    }
+
+    // ==============================
+    // Validate Chatbot Configuration
+    // ==============================
+
+    if (!chatbotConfigured) {
+      setError(
+        "Nura AI is temporarily unavailable in this environment."
+      );
 
       return;
     }
@@ -224,7 +243,10 @@ export default function NuraChatWidget() {
       content: cleanMessage,
     };
 
-    const nextMessages = [...messages, userMessage];
+    const nextMessages = [
+      ...messages,
+      userMessage,
+    ];
 
     // ==============================
     // Optimistic UI Update
@@ -276,15 +298,6 @@ export default function NuraChatWidget() {
 
       const idToken = await currentUser.getIdToken();
 
-      // ==============================
-      // Validate Chatbot Configuration
-      // ==============================
-
-      if (!chatbotConfigured) {
-        setError("Nura AI is temporarily unavailable in this environment.");
-
-        return;
-      }
 
       // ==============================
       // Call Secured Chatbot API
@@ -362,10 +375,21 @@ export default function NuraChatWidget() {
       setMessages((current) => [...current, assistantMessage]);
 
       // ==============================
-      // Save AI Response
-      // ==============================
+// Save AI Response
+// ==============================
 
-      await saveMessage(sessionId, assistantMessage);
+try {
+  await saveMessage(
+    sessionId,
+    assistantMessage
+  );
+} catch (saveError) {
+  console.error(
+    "Unable to save assistant message:",
+    saveError
+  );
+}
+
     } catch (chatError) {
       console.error("Nura chatbot error:", chatError);
 

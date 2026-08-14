@@ -61,12 +61,32 @@ export async function requireAuth(
     // Verify Firebase Token
     // ==============================
 
-    await adminAuth.verifyIdToken(
-      idToken
-    );
+    const decodedToken =
+      await adminAuth.verifyIdToken(
+        idToken,
+        true
+      );
 
-    next();
+    // ==============================
+    // Attach Authenticated User
+    // ==============================
+
+    response.locals.user = {
+      uid: decodedToken.uid,
+      email:
+        decodedToken.email ?? null,
+    };
+
+    // ==============================
+    // Continue Request
+    // ==============================
+
+    return next();
   } catch (error) {
+    // ==============================
+    // Authentication Failure
+    // ==============================
+
     console.error(
       "Authentication failed:",
       error

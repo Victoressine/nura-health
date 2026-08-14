@@ -3,14 +3,13 @@
 // ==============================
 
 import {
+  applicationDefault,
   cert,
   getApps,
   initializeApp,
 } from "firebase-admin/app";
 
-import {
-  getAuth,
-} from "firebase-admin/auth";
+import { getAuth } from "firebase-admin/auth";
 
 // ==============================
 // Firebase Admin Environment
@@ -28,24 +27,40 @@ const privateKey =
     .trim();
 
 // ==============================
-// Validate Configuration
+// Determine Credentials
 // ==============================
 
-if (!projectId) {
-  throw new Error(
-    "FIREBASE_PROJECT_ID is not configured."
-  );
-}
+const hasProjectId =
+  Boolean(projectId);
 
-if (!clientEmail) {
-  throw new Error(
-    "FIREBASE_CLIENT_EMAIL is not configured."
-  );
-}
+const hasClientEmail =
+  Boolean(clientEmail);
 
-if (!privateKey) {
+const hasPrivateKey =
+  Boolean(privateKey);
+
+const hasAnyServerCredential =
+  hasProjectId ||
+  hasClientEmail ||
+  hasPrivateKey;
+
+const hasAllServerCredentials =
+  hasProjectId &&
+  hasClientEmail &&
+  hasPrivateKey;
+
+// ==============================
+// Validate Partial Configuration
+// ==============================
+
+if (
+  hasAnyServerCredential &&
+  !hasAllServerCredentials
+) {
   throw new Error(
-    "FIREBASE_PRIVATE_KEY is not configured."
+    "Firebase Admin configuration is incomplete. " +
+      "FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, " +
+      "and FIREBASE_PRIVATE_KEY must all be provided."
   );
 }
 
@@ -57,11 +72,13 @@ const firebaseAdminApp =
   getApps().length > 0
     ? getApps()[0]
     : initializeApp({
-        credential: cert({
-          projectId,
-          clientEmail,
-          privateKey,
-        }),
+        credential: hasAllServerCredentials
+          ? cert({
+              projectId: projectId!,
+              clientEmail: clientEmail!,
+              privateKey: privateKey!,
+            })
+          : applicationDefault(),
       });
 
 // ==============================

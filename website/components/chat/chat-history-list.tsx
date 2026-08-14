@@ -126,16 +126,23 @@ export default function ChatHistoryList() {
       onAuthStateChanged(
         auth,
         (user) => {
-          if (!user) {
-            setUserId(null);
-            setSessions([]);
-            setSelectedSession(null);
-            setMessages([]);
-            setLoading(false);
-            return;
-          }
+         if (!user) {
+  setUserId(null);
+  setSessions([]);
+  setSelectedSession(null);
+  setMessages([]);
+  setError("");
+  setLoading(false);
+  return;
+}
 
-          setUserId(user.uid);
+// ==============================
+// Prepare Authenticated Session
+// ==============================
+
+setError("");
+setLoading(true);
+setUserId(user.uid);
         }
       );
 
@@ -150,9 +157,6 @@ export default function ChatHistoryList() {
     if (!userId) {
       return;
     }
-
-    setLoading(true);
-    setError("");
 
     const sessionsRef =
       collection(

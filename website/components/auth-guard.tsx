@@ -4,19 +4,11 @@
 // Imports
 // ==============================
 
-import {
-  ReactNode,
-  useEffect,
-  useState,
-} from "react";
+import { ReactNode, useEffect, useState } from "react";
 
-import {
-  onAuthStateChanged,
-} from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 
-import {
-  useRouter,
-} from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { auth } from "@/lib/firebase";
 
@@ -32,44 +24,35 @@ type AuthGuardProps = {
 // Auth Guard
 // ==============================
 
-export default function AuthGuard({
-  children,
-}: AuthGuardProps) {
+export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
 
   // ==============================
   // State
   // ==============================
 
-  const [checkingAuth, setCheckingAuth] =
-    useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
-  const [authenticated, setAuthenticated] =
-    useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
 
   // ==============================
   // Watch Authentication State
   // ==============================
 
   useEffect(() => {
-    const unsubscribe =
-      onAuthStateChanged(
-        auth,
-        (user) => {
-          if (!user) {
-            setAuthenticated(false);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        setAuthenticated(false);
+        setCheckingAuth(false);
 
-            router.replace(
-              "/login"
-            );
+        router.replace("/login");
 
-            return;
-          }
+        return;
+      }
 
-          setAuthenticated(true);
-          setCheckingAuth(false);
-        }
-      );
+      setAuthenticated(true);
+      setCheckingAuth(false);
+    });
 
     return unsubscribe;
   }, [router]);
@@ -78,10 +61,7 @@ export default function AuthGuard({
   // Loading / Redirect State
   // ==============================
 
-  if (
-    checkingAuth ||
-    !authenticated
-  ) {
+  if (checkingAuth || !authenticated) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="text-center">

@@ -169,24 +169,26 @@ export async function chatController(
     }
 
     // ==============================
-    // Require Latest User Message
-    // ==============================
+// Require Latest Message From User
+// ==============================
 
-    const latestUserMessage =
-      [...cleanMessages]
-        .reverse()
-        .find(
-          (message) =>
-            message.role ===
-            "user"
-        );
+const latestMessage =
+  cleanMessages[
+    cleanMessages.length - 1
+  ];
 
-    if (!latestUserMessage) {
-      return response.status(400).json({
-        error:
-          "The conversation must include at least one user message.",
-      });
-    }
+if (
+  !latestMessage ||
+  latestMessage.role !== "user"
+) {
+  return response.status(400).json({
+    error:
+      "The latest conversation message must be from the user.",
+  });
+}
+
+const latestUserMessage =
+  latestMessage;
 
     // ==============================
     // Emergency Safety Screening
@@ -226,7 +228,7 @@ export async function chatController(
     // Generate AI Response
     // ==============================
 
-    const reply =
+        const reply =
       await generateChatResponse(
         cleanMessages
       );
@@ -257,23 +259,43 @@ export async function chatController(
       source:
         "ollama",
     });
+
   } catch (error) {
-    // ==============================
-    // Server-side Logging
-    // ==============================
+  // ==============================
+  // Server-side Logging
+  // ==============================
 
-    console.error(
-      "Chat controller error:",
-      error
-    );
+  console.error(
+    "Chat controller error:",
+    error
+  );
 
-    // ==============================
-    // Safe Client Error
-    // ==============================
+  // ==============================
+  // Known Safe Errors
+  // ==============================
 
-    return response.status(500).json({
-      error:
-        "Nura AI could not generate a response. Please try again.",
-    });
+  if (error instanceof Error) {
+    const safeMessages = new Set([
+      "Nura AI took too long to respond.",
+      "The AI service could not complete the request.",
+      "The AI service returned an invalid response.",
+      "Nura AI could not communicate with the AI service.",
+    ]);
+
+    if (safeMessages.has(error.message)) {
+      return response.status(503).json({
+        error: error.message,
+      });
+    }
   }
+
+  // ==============================
+  // Generic Server Error
+  // ==============================
+
+  return response.status(500).json({
+    error:
+      "Nura AI could not generate a response. Please try again.",
+  });
+}
 }

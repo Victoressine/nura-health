@@ -35,20 +35,15 @@ type OllamaChatResponse = {
 // Constants
 // ==============================
 
-const OLLAMA_CHAT_PATH =
-  "/api/chat";
+const OLLAMA_CHAT_PATH = "/api/chat";
 
-const REQUEST_TIMEOUT_MS =
-  90_000;
+const REQUEST_TIMEOUT_MS = 90_000;
 
-const MAX_CONVERSATION_MESSAGES =
-  30;
+const MAX_CONVERSATION_MESSAGES = 30;
 
-const MAX_MESSAGE_LENGTH =
-  10_000;
+const MAX_MESSAGE_LENGTH = 10_000;
 
-const MAX_RESPONSE_LENGTH =
-  20_000;
+const MAX_RESPONSE_LENGTH = 20_000;
 
 // ==============================
 // Nura Health System Prompt
@@ -218,11 +213,7 @@ When appropriate, end health-guidance responses with a brief reminder that Nura 
 // ==============================
 
 function getOllamaChatUrl(): string {
-  const baseUrl =
-    env.ollamaBaseUrl.replace(
-      /\/+$/,
-      ""
-    );
+  const baseUrl = env.ollamaBaseUrl.replace(/\/+$/, "");
 
   return `${baseUrl}${OLLAMA_CHAT_PATH}`;
 }
@@ -231,42 +222,25 @@ function getOllamaChatUrl(): string {
 // Sanitize Conversation
 // ==============================
 
-function sanitizeMessages(
-  messages: ChatMessage[]
-): SafeChatMessage[] {
+function sanitizeMessages(messages: ChatMessage[]): SafeChatMessage[] {
   if (!Array.isArray(messages)) {
-    throw new Error(
-      "Messages must be provided as an array."
-    );
+    throw new Error("Messages must be provided as an array.");
   }
 
   if (messages.length === 0) {
-    throw new Error(
-      "At least one message is required."
-    );
+    throw new Error("At least one message is required.");
   }
 
   // ==============================
   // Limit Conversation Context
   // ==============================
 
-  const recentMessages =
-    messages.slice(
-      -MAX_CONVERSATION_MESSAGES
-    );
+  const recentMessages = messages.slice(-MAX_CONVERSATION_MESSAGES);
 
-  const sanitized:
-    SafeChatMessage[] = [];
+  const sanitized: SafeChatMessage[] = [];
 
-  for (
-    const message
-    of recentMessages
-  ) {
-    if (
-      !message ||
-      typeof message.content !==
-        "string"
-    ) {
+  for (const message of recentMessages) {
+    if (!message || typeof message.content !== "string") {
       continue;
     }
 
@@ -274,39 +248,25 @@ function sanitizeMessages(
     // Never Trust Client System Prompts
     // ==============================
 
-    if (
-      message.role !== "user" &&
-      message.role !== "assistant"
-    ) {
+    if (message.role !== "user" && message.role !== "assistant") {
       continue;
     }
 
-    const content =
-      message.content
-        .trim()
-        .slice(
-          0,
-          MAX_MESSAGE_LENGTH
-        );
+    const content = message.content.trim().slice(0, MAX_MESSAGE_LENGTH);
 
     if (!content) {
       continue;
     }
 
     sanitized.push({
-      role:
-        message.role,
+      role: message.role,
 
       content,
     });
   }
 
-  if (
-    sanitized.length === 0
-  ) {
-    throw new Error(
-      "No valid conversation messages were provided."
-    );
+  if (sanitized.length === 0) {
+    throw new Error("No valid conversation messages were provided.");
   }
 
   return sanitized;
@@ -316,12 +276,9 @@ function sanitizeMessages(
 // Safely Read Ollama Error
 // ==============================
 
-async function readErrorResponse(
-  response: Response
-): Promise<string> {
+async function readErrorResponse(response: Response): Promise<string> {
   try {
-    const text =
-      await response.text();
+    const text = await response.text();
 
     if (!text) {
       return "No additional error information.";
@@ -331,10 +288,7 @@ async function readErrorResponse(
     // Avoid Huge Log Messages
     // ==============================
 
-    return text.slice(
-      0,
-      1000
-    );
+    return text.slice(0, 1000);
   } catch {
     return "Unable to read Ollama error response.";
   }
@@ -345,155 +299,124 @@ async function readErrorResponse(
 // ==============================
 
 export async function generateChatResponse(
-  messages: ChatMessage[]
+  messages: ChatMessage[],
 ): Promise<string> {
   // ==============================
   // Sanitize Conversation
   // ==============================
 
-  const safeMessages =
-    sanitizeMessages(
-      messages
-    );
+  const safeMessages = sanitizeMessages(messages);
 
   // ==============================
   // Request Timeout
   // ==============================
 
-  const controller =
-    new AbortController();
+  const controller = new AbortController();
 
-  const timeout =
-    setTimeout(
-      () =>
-        controller.abort(),
-      REQUEST_TIMEOUT_MS
-    );
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
     // ==============================
     // Call Ollama
     // ==============================
 
-    const response =
-      await fetch(
-        getOllamaChatUrl(),
-        {
-          method: "POST",
+    const response = await fetch(getOllamaChatUrl(), {
+      method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json",
+      headers: {
+        "Content-Type": "application/json",
 
-            Accept:
-              "application/json",
+        Accept: "application/json",
+      },
+
+      signal: controller.signal,
+
+      body: JSON.stringify({
+        model: env.ollamaModel,
+
+        messages: [
+          {
+            role: "system",
+
+            content: SYSTEM_PROMPT,
           },
 
-          signal:
-            controller.signal,
+          ...safeMessages,
+        ],
 
-          body:
-            JSON.stringify({
-              model:
-                env.ollamaModel,
+        // ==============================
+        // Non-streaming for Current V1
+        // ==============================
 
-              messages: [
-                {
-                  role:
-                    "system",
+        stream: false,
 
-                  content:
-                    SYSTEM_PROMPT,
-                },
+        // ==============================
+        // Prevent Thinking Output
+        // ==============================
 
-                ...safeMessages,
-              ],
+        think: false,
 
-              // ==============================
-              // Non-streaming for Current V1
-              // ==============================
+        // ==============================
+        // Generation Settings
+        // ==============================
 
-              stream: false,
-
-              // ==============================
-              // Prevent Thinking Output
-              // ==============================
-
-              think: false,
-
-              // ==============================
-              // Generation Settings
-              // ==============================
-
-              options: {
-                temperature:
-                  0.2,
-              },
-            }),
-        }
-      );
+        options: {
+          temperature: 0.2,
+        },
+      }),
+    });
 
     // ==============================
     // Handle Ollama HTTP Error
     // ==============================
 
     if (!response.ok) {
-      const errorText =
-        await readErrorResponse(
-          response
-        );
+      const errorText = await readErrorResponse(response);
 
       console.error(
         `Ollama request failed with status ${response.status}:`,
-        errorText
+        errorText,
       );
 
-      throw new Error(
-        "The local AI service could not complete the request."
-      );
+      throw new Error("The AI service could not complete the request.");
     }
 
     // ==============================
     // Parse Response
     // ==============================
 
-    const data =
-      (await response.json()) as
-        OllamaChatResponse;
+    let data: OllamaChatResponse;
+
+try {
+  data =
+    (await response.json()) as
+      OllamaChatResponse;
+} catch {
+  throw new Error(
+    "The AI service returned an invalid response."
+  );
+}
 
     // ==============================
     // Validate Response
     // ==============================
 
-    const content =
-      data.message
-        ?.content
-        ?.trim();
+    const content = data.message?.content?.trim();
 
     if (!content) {
-      throw new Error(
-        "Ollama returned an empty response."
-      );
+      throw new Error("Ollama returned an empty response.");
     }
 
     // ==============================
     // Prevent Unexpectedly Huge Output
     // ==============================
 
-    if (
-      content.length >
-      MAX_RESPONSE_LENGTH
-    ) {
+    if (content.length > MAX_RESPONSE_LENGTH) {
       console.warn(
-        "Ollama response exceeded the configured maximum response length."
+        "Ollama response exceeded the configured maximum response length.",
       );
 
-      return content
-        .slice(
-          0,
-          MAX_RESPONSE_LENGTH
-        )
-        .trim();
+      return content.slice(0, MAX_RESPONSE_LENGTH).trim();
     }
 
     // ==============================
@@ -506,33 +429,18 @@ export async function generateChatResponse(
     // Timeout Handling
     // ==============================
 
-    if (
-      error instanceof
-        DOMException &&
-      error.name ===
-        "AbortError"
-    ) {
-      console.error(
-        "Ollama request timed out."
-      );
+    if (error instanceof DOMException && error.name === "AbortError") {
+      console.error("Ollama request timed out.");
 
-      throw new Error(
-        "Nura AI took too long to respond."
-      );
+      throw new Error("Nura AI took too long to respond.");
     }
 
     // ==============================
     // Known Error
     // ==============================
 
-    if (
-      error instanceof
-      Error
-    ) {
-      console.error(
-        "Ollama service error:",
-        error.message
-      );
+    if (error instanceof Error) {
+      console.error("Ollama service error:", error.message);
 
       throw error;
     }
@@ -541,21 +449,16 @@ export async function generateChatResponse(
     // Unknown Error
     // ==============================
 
-    console.error(
-      "Unknown Ollama service error:",
-      error
-    );
+    console.error("Unknown Ollama service error:", error);
 
     throw new Error(
-      "Nura AI could not communicate with the local AI service."
-    );
+  "Nura AI could not communicate with the AI service."
+);
   } finally {
     // ==============================
     // Cleanup Timeout
     // ==============================
 
-    clearTimeout(
-      timeout
-    );
+    clearTimeout(timeout);
   }
 }

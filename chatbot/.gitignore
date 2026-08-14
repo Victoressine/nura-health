@@ -5,36 +5,44 @@
 node_modules/
 
 # ==============================
+# Build Output
+# ==============================
+
+dist/
+
+# ==============================
 # Environment / Secrets
 # ==============================
 
-# Firebase Admin credentials
-nura-health-679c9-firebase-adminsdk-fbsvc-185068d812.json
-*-firebase-adminsdk-*.json
-
-# Environment variables
-.env
-.env.local
-
-# Dependencies
-node_modules/
-
-# Build output
-
-dist/
 .env
 .env.*
 !.env.example
 
+# Firebase Admin service accounts
+*-firebase-adminsdk-*.json
+*service-account*.json
+*serviceAccount*.json
+
 # ==============================
-# Build
+# Logs
 # ==============================
 
-dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # ==============================
 # OS / Editor
 # ==============================
 
 .DS_Store
-*.log
+.vscode/
+.idea/
+
+# ==============================
+# TypeScript
+# ==============================
+
+*.tsbuildinfo

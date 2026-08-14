@@ -2,11 +2,16 @@
   "name": "nura-health",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "check": "npm run typecheck && npm run lint && npm run build"
   },
   "dependencies": {
     "firebase": "^12.17.1",

@@ -184,7 +184,7 @@ const EMERGENCY_RESPONSES:
     "A prolonged or repeated seizure can require emergency medical attention. Please contact your local emergency service immediately and get help from someone nearby.",
 
   self_harm:
-    "I’m concerned that you may be in immediate danger. Please move away from anything you could use to hurt yourself and contact emergency medical services or a trusted person who can stay with you now. Nura AI should not be your only source of support in an immediate crisis.",
+  "I’m concerned that you may be in immediate danger. Please contact your local emergency service or an appropriate crisis service now, and reach out to a trusted person who can stay with you. If you can do so safely, move away from anything you could use to hurt yourself and avoid being alone. Nura AI should not be your only source of support in an immediate crisis.",
 };
 
 // ==============================
@@ -195,7 +195,9 @@ export function checkForEmergency(
   message: string
 ): EmergencyCheckResult {
   const cleanMessage =
-    message.trim();
+  message
+    .trim()
+    .replace(/[’‘]/g, "'");
 
   if (!cleanMessage) {
     return {
