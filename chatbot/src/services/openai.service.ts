@@ -9,12 +9,25 @@ import { env } from "../config/env.js";
 // ==============================
 
 export type ChatMessage = {
-  role: "system" | "user" | "assistant";
+  role:
+    | "system"
+    | "user"
+    | "assistant";
   content: string;
 };
 
 type SafeChatMessage = {
-  role: "user" | "assistant";
+  role:
+    | "user"
+    | "assistant";
+  content: string;
+};
+
+type ProviderMessage = {
+  role:
+    | "system"
+    | "user"
+    | "assistant";
   content: string;
 };
 
@@ -31,19 +44,46 @@ type OllamaChatResponse = {
   done_reason?: string;
 };
 
+type GroqChatResponse = {
+  id?: string;
+  model?: string;
+
+  choices?: Array<{
+    index?: number;
+
+    message?: {
+      role?: string;
+      content?: string | null;
+    };
+
+    finish_reason?: string | null;
+  }>;
+};
+
 // ==============================
 // Constants
 // ==============================
 
-const OLLAMA_CHAT_PATH = "/api/chat";
+const OLLAMA_CHAT_PATH =
+  "/api/chat";
 
-const REQUEST_TIMEOUT_MS = 90_000;
+const GROQ_CHAT_URL =
+  "https://api.groq.com/openai/v1/chat/completions";
 
-const MAX_CONVERSATION_MESSAGES = 30;
+const REQUEST_TIMEOUT_MS =
+  90_000;
 
-const MAX_MESSAGE_LENGTH = 10_000;
+const MAX_CONVERSATION_MESSAGES =
+  30;
 
-const MAX_RESPONSE_LENGTH = 20_000;
+const MAX_MESSAGE_LENGTH =
+  10_000;
+
+const MAX_RESPONSE_LENGTH =
+  20_000;
+
+const AI_TEMPERATURE =
+  0.2;
 
 // ==============================
 // Nura Health System Prompt
@@ -209,11 +249,15 @@ When appropriate, end health-guidance responses with a brief reminder that Nura 
 `.trim();
 
 // ==============================
-// Normalize Base URL
+// Ollama URL
 // ==============================
 
 function getOllamaChatUrl(): string {
-  const baseUrl = env.ollamaBaseUrl.replace(/\/+$/, "");
+  const baseUrl =
+    env.ollamaBaseUrl.replace(
+      /\/+$/,
+      ""
+    );
 
   return `${baseUrl}${OLLAMA_CHAT_PATH}`;
 }
@@ -222,25 +266,42 @@ function getOllamaChatUrl(): string {
 // Sanitize Conversation
 // ==============================
 
-function sanitizeMessages(messages: ChatMessage[]): SafeChatMessage[] {
+function sanitizeMessages(
+  messages: ChatMessage[]
+): SafeChatMessage[] {
   if (!Array.isArray(messages)) {
-    throw new Error("Messages must be provided as an array.");
+    throw new Error(
+      "Messages must be provided as an array."
+    );
   }
 
   if (messages.length === 0) {
-    throw new Error("At least one message is required.");
+    throw new Error(
+      "At least one message is required."
+    );
   }
 
   // ==============================
   // Limit Conversation Context
   // ==============================
 
-  const recentMessages = messages.slice(-MAX_CONVERSATION_MESSAGES);
+  const recentMessages =
+    messages.slice(
+      -MAX_CONVERSATION_MESSAGES
+    );
 
-  const sanitized: SafeChatMessage[] = [];
+  const sanitized:
+    SafeChatMessage[] = [];
 
-  for (const message of recentMessages) {
-    if (!message || typeof message.content !== "string") {
+  for (
+    const message
+    of recentMessages
+  ) {
+    if (
+      !message ||
+      typeof message.content !==
+        "string"
+    ) {
       continue;
     }
 
@@ -248,50 +309,395 @@ function sanitizeMessages(messages: ChatMessage[]): SafeChatMessage[] {
     // Never Trust Client System Prompts
     // ==============================
 
-    if (message.role !== "user" && message.role !== "assistant") {
+    if (
+      message.role !== "user" &&
+      message.role !== "assistant"
+    ) {
       continue;
     }
 
-    const content = message.content.trim().slice(0, MAX_MESSAGE_LENGTH);
+    const content =
+      message.content
+        .trim()
+        .slice(
+          0,
+          MAX_MESSAGE_LENGTH
+        );
 
     if (!content) {
       continue;
     }
 
     sanitized.push({
-      role: message.role,
+      role:
+        message.role,
 
       content,
     });
   }
 
   if (sanitized.length === 0) {
-    throw new Error("No valid conversation messages were provided.");
+    throw new Error(
+      "No valid conversation messages were provided."
+    );
   }
 
   return sanitized;
 }
 
 // ==============================
-// Safely Read Ollama Error
+// Build Provider Messages
 // ==============================
 
-async function readErrorResponse(response: Response): Promise<string> {
+function buildProviderMessages(
+  messages: SafeChatMessage[]
+): ProviderMessage[] {
+  return [
+    {
+      role: "system",
+      content:
+        SYSTEM_PROMPT,
+    },
+
+    ...messages,
+  ];
+}
+
+// ==============================
+// Read Provider Error Safely
+// ==============================
+
+async function readErrorResponse(
+  response: Response
+): Promise<string> {
   try {
-    const text = await response.text();
+    const text =
+      await response.text();
 
     if (!text) {
-      return "No additional error information.";
+      return (
+        "No additional error information."
+      );
     }
 
     // ==============================
     // Avoid Huge Log Messages
     // ==============================
 
-    return text.slice(0, 1000);
+    return text.slice(
+      0,
+      1000
+    );
   } catch {
-    return "Unable to read Ollama error response.";
+    return (
+      "Unable to read AI provider error response."
+    );
   }
+}
+
+// ==============================
+// Ollama Provider
+// ==============================
+
+async function generateWithOllama(
+  messages: ProviderMessage[],
+  signal: AbortSignal
+): Promise<string> {
+  // ==============================
+  // Request Ollama
+  // ==============================
+
+  const response =
+    await fetch(
+      getOllamaChatUrl(),
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          Accept:
+            "application/json",
+        },
+
+        signal,
+
+        body:
+          JSON.stringify({
+            model:
+              env.ollamaModel,
+
+            messages,
+
+            // ==============================
+            // Non-streaming for V1
+            // ==============================
+
+            stream: false,
+
+            // ==============================
+            // Prevent Thinking Output
+            // ==============================
+
+            think: false,
+
+            // ==============================
+            // Generation Settings
+            // ==============================
+
+            options: {
+              temperature:
+                AI_TEMPERATURE,
+            },
+          }),
+      }
+    );
+
+  // ==============================
+  // Handle HTTP Error
+  // ==============================
+
+  if (!response.ok) {
+    const errorText =
+      await readErrorResponse(
+        response
+      );
+
+    console.error(
+      `Ollama request failed with status ${response.status}:`,
+      errorText
+    );
+
+    throw new Error(
+      "The AI service could not complete the request."
+    );
+  }
+
+  // ==============================
+  // Parse Response
+  // ==============================
+
+  let data:
+    OllamaChatResponse;
+
+  try {
+    data =
+      (await response.json()) as
+        OllamaChatResponse;
+  } catch {
+    throw new Error(
+      "The AI service returned an invalid response."
+    );
+  }
+
+  // ==============================
+  // Extract Response
+  // ==============================
+
+  const content =
+    data.message?.content?.trim();
+
+  if (!content) {
+    throw new Error(
+      "The AI service returned an empty response."
+    );
+  }
+
+  return content;
+}
+
+// ==============================
+// Groq Provider
+// ==============================
+
+async function generateWithGroq(
+  messages: ProviderMessage[],
+  signal: AbortSignal
+): Promise<string> {
+  // ==============================
+  // Validate Groq Configuration
+  // ==============================
+
+  if (!env.groqApiKey) {
+    throw new Error(
+      "Groq API credentials are not configured."
+    );
+  }
+
+  // ==============================
+  // Request Groq
+  // ==============================
+
+  const response =
+    await fetch(
+      GROQ_CHAT_URL,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          Accept:
+            "application/json",
+
+          Authorization:
+            `Bearer ${env.groqApiKey}`,
+        },
+
+        signal,
+
+        body:
+          JSON.stringify({
+            model:
+              env.groqModel,
+
+            messages,
+
+            temperature:
+              AI_TEMPERATURE,
+
+            stream:
+              false,
+          }),
+      }
+    );
+
+  // ==============================
+  // Handle HTTP Error
+  // ==============================
+
+  if (!response.ok) {
+    const errorText =
+      await readErrorResponse(
+        response
+      );
+
+    console.error(
+      `Groq request failed with status ${response.status}:`,
+      errorText
+    );
+
+    throw new Error(
+      "The AI service could not complete the request."
+    );
+  }
+
+  // ==============================
+  // Parse Response
+  // ==============================
+
+  let data:
+    GroqChatResponse;
+
+  try {
+    data =
+      (await response.json()) as
+        GroqChatResponse;
+  } catch {
+    throw new Error(
+      "The AI service returned an invalid response."
+    );
+  }
+
+  // ==============================
+  // Extract Response
+  // ==============================
+
+  const content =
+    data.choices?.[0]
+      ?.message
+      ?.content
+      ?.trim();
+
+  if (!content) {
+    throw new Error(
+      "The AI service returned an empty response."
+    );
+  }
+
+  return content;
+}
+
+// ==============================
+// Generate Provider Response
+// ==============================
+
+async function generateProviderResponse(
+  messages: ProviderMessage[],
+  signal: AbortSignal
+): Promise<string> {
+  // ==============================
+  // Ollama
+  // ==============================
+
+  if (
+    env.aiProvider ===
+    "ollama"
+  ) {
+    return generateWithOllama(
+      messages,
+      signal
+    );
+  }
+
+  // ==============================
+  // Groq
+  // ==============================
+
+  if (
+    env.aiProvider ===
+    "groq"
+  ) {
+    return generateWithGroq(
+      messages,
+      signal
+    );
+  }
+
+  // ==============================
+  // Defensive Fallback
+  // ==============================
+
+  throw new Error(
+    "The configured AI provider is not supported."
+  );
+}
+
+// ==============================
+// Validate Response Length
+// ==============================
+
+function validateResponseLength(
+  content: string
+): string {
+  const cleanContent =
+    content.trim();
+
+  if (!cleanContent) {
+    throw new Error(
+      "The AI service returned an empty response."
+    );
+  }
+
+  if (
+    cleanContent.length >
+    MAX_RESPONSE_LENGTH
+  ) {
+    console.warn(
+      "AI response exceeded the configured maximum response length."
+    );
+
+    return cleanContent
+      .slice(
+        0,
+        MAX_RESPONSE_LENGTH
+      )
+      .trim();
+  }
+
+  return cleanContent;
 }
 
 // ==============================
@@ -299,148 +705,88 @@ async function readErrorResponse(response: Response): Promise<string> {
 // ==============================
 
 export async function generateChatResponse(
-  messages: ChatMessage[],
+  messages: ChatMessage[]
 ): Promise<string> {
   // ==============================
   // Sanitize Conversation
   // ==============================
 
-  const safeMessages = sanitizeMessages(messages);
+  const safeMessages =
+    sanitizeMessages(
+      messages
+    );
+
+  // ==============================
+  // Build Trusted Conversation
+  // ==============================
+
+  const providerMessages =
+    buildProviderMessages(
+      safeMessages
+    );
 
   // ==============================
   // Request Timeout
   // ==============================
 
-  const controller = new AbortController();
+  const controller =
+    new AbortController();
 
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout =
+    setTimeout(
+      () =>
+        controller.abort(),
+      REQUEST_TIMEOUT_MS
+    );
 
   try {
     // ==============================
-    // Call Ollama
+    // Generate Response
     // ==============================
 
-    const response = await fetch(getOllamaChatUrl(), {
-      method: "POST",
-
-      headers: {
-        "Content-Type": "application/json",
-
-        Accept: "application/json",
-      },
-
-      signal: controller.signal,
-
-      body: JSON.stringify({
-        model: env.ollamaModel,
-
-        messages: [
-          {
-            role: "system",
-
-            content: SYSTEM_PROMPT,
-          },
-
-          ...safeMessages,
-        ],
-
-        // ==============================
-        // Non-streaming for Current V1
-        // ==============================
-
-        stream: false,
-
-        // ==============================
-        // Prevent Thinking Output
-        // ==============================
-
-        think: false,
-
-        // ==============================
-        // Generation Settings
-        // ==============================
-
-        options: {
-          temperature: 0.2,
-        },
-      }),
-    });
-
-    // ==============================
-    // Handle Ollama HTTP Error
-    // ==============================
-
-    if (!response.ok) {
-      const errorText = await readErrorResponse(response);
-
-      console.error(
-        `Ollama request failed with status ${response.status}:`,
-        errorText,
+    const content =
+      await generateProviderResponse(
+        providerMessages,
+        controller.signal
       );
-
-      throw new Error("The AI service could not complete the request.");
-    }
-
-    // ==============================
-    // Parse Response
-    // ==============================
-
-    let data: OllamaChatResponse;
-
-try {
-  data =
-    (await response.json()) as
-      OllamaChatResponse;
-} catch {
-  throw new Error(
-    "The AI service returned an invalid response."
-  );
-}
 
     // ==============================
     // Validate Response
     // ==============================
 
-    const content = data.message?.content?.trim();
-
-    if (!content) {
-      throw new Error("Ollama returned an empty response.");
-    }
-
-    // ==============================
-    // Prevent Unexpectedly Huge Output
-    // ==============================
-
-    if (content.length > MAX_RESPONSE_LENGTH) {
-      console.warn(
-        "Ollama response exceeded the configured maximum response length.",
-      );
-
-      return content.slice(0, MAX_RESPONSE_LENGTH).trim();
-    }
-
-    // ==============================
-    // Return Response
-    // ==============================
-
-    return content;
+    return validateResponseLength(
+      content
+    );
   } catch (error) {
     // ==============================
     // Timeout Handling
     // ==============================
 
-    if (error instanceof DOMException && error.name === "AbortError") {
-      console.error("Ollama request timed out.");
+    if (
+      error instanceof
+        DOMException &&
+      error.name === "AbortError"
+    ) {
+      console.error(
+        `${env.aiProvider} request timed out.`
+      );
 
-      throw new Error("Nura AI took too long to respond.");
+      throw new Error(
+        "Nura AI took too long to respond."
+      );
     }
 
     // ==============================
     // Known Error
     // ==============================
 
-    if (error instanceof Error) {
-      console.error("Ollama service error:", error.message);
+    if (
+      error instanceof Error
+    ) {
+      console.error(
+        `${env.aiProvider} service error:`,
+        error.message
+      );
 
       throw error;
     }
@@ -449,16 +795,21 @@ try {
     // Unknown Error
     // ==============================
 
-    console.error("Unknown Ollama service error:", error);
+    console.error(
+      `Unknown ${env.aiProvider} service error:`,
+      error
+    );
 
     throw new Error(
-  "Nura AI could not communicate with the AI service."
-);
+      "Nura AI could not communicate with the AI service."
+    );
   } finally {
     // ==============================
     // Cleanup Timeout
     // ==============================
 
-    clearTimeout(timeout);
+    clearTimeout(
+      timeout
+    );
   }
 }

@@ -5,18 +5,54 @@
 import "dotenv/config";
 
 // ==============================
-// Environment Helpers
+// Types
+// ==============================
+
+export type AiProvider =
+  | "ollama"
+  | "groq";
+
+// ==============================
+// Runtime Environment
 // ==============================
 
 const isProduction =
   process.env.NODE_ENV === "production";
 
-function requireProductionValue(
-  name: string,
-  fallback: string
+// ==============================
+// Environment Helpers
+// ==============================
+
+function getOptionalValue(
+  name: string
+): string {
+  return (
+    process.env[name]?.trim() ??
+    ""
+  );
+}
+
+function requireValue(
+  name: string
 ): string {
   const value =
-    process.env[name]?.trim();
+    getOptionalValue(name);
+
+  if (!value) {
+    throw new Error(
+      `${name} is required.`
+    );
+  }
+
+  return value;
+}
+
+function requireProductionValue(
+  name: string,
+  developmentFallback: string
+): string {
+  const value =
+    getOptionalValue(name);
 
   if (value) {
     return value;
@@ -28,7 +64,7 @@ function requireProductionValue(
     );
   }
 
-  return fallback;
+  return developmentFallback;
 }
 
 // ==============================
@@ -37,7 +73,7 @@ function requireProductionValue(
 
 function getPort(): number {
   const rawPort =
-    process.env.PORT?.trim();
+    getOptionalValue("PORT");
 
   if (!rawPort) {
     return 4000;
@@ -60,27 +96,154 @@ function getPort(): number {
 }
 
 // ==============================
+// AI Provider Configuration
+// ==============================
+
+function getAiProvider(): AiProvider {
+  const configuredProvider =
+    getOptionalValue(
+      "AI_PROVIDER"
+    ).toLowerCase();
+
+  // ==============================
+  // Explicit Provider
+  // ==============================
+
+  if (
+    configuredProvider ===
+      "ollama" ||
+    configuredProvider ===
+      "groq"
+  ) {
+    return configuredProvider;
+  }
+
+  // ==============================
+  // Invalid Provider
+  // ==============================
+
+  if (configuredProvider) {
+    throw new Error(
+      "AI_PROVIDER must be either 'ollama' or 'groq'."
+    );
+  }
+
+  // ==============================
+  // Environment Default
+  // ==============================
+
+  return isProduction
+    ? "groq"
+    : "ollama";
+}
+
+const aiProvider =
+  getAiProvider();
+
+// ==============================
+// Ollama Configuration
+// ==============================
+
+function getOllamaBaseUrl(): string {
+  return (
+    getOptionalValue(
+      "OLLAMA_BASE_URL"
+    ) ||
+    "http://localhost:11434"
+  ).replace(/\/+$/, "");
+}
+
+function getOllamaModel(): string {
+  return (
+    getOptionalValue(
+      "OLLAMA_MODEL"
+    ) ||
+    "qwen3.5:4b"
+  );
+}
+
+// ==============================
+// Groq Configuration
+// ==============================
+
+function getGroqApiKey(): string {
+  const apiKey =
+    getOptionalValue(
+      "GROQ_API_KEY"
+    );
+
+  if (
+    aiProvider === "groq" &&
+    !apiKey
+  ) {
+    throw new Error(
+      "GROQ_API_KEY is required when AI_PROVIDER is 'groq'."
+    );
+  }
+
+  return apiKey;
+}
+
+function getGroqModel(): string {
+  return (
+    getOptionalValue(
+      "GROQ_MODEL"
+    ) ||
+    "openai/gpt-oss-20b"
+  );
+}
+
+// ==============================
+// Website / CORS Configuration
+// ==============================
+
+function getWebsiteOrigin(): string {
+  return requireProductionValue(
+    "WEBSITE_ORIGIN",
+    "http://localhost:3000"
+  ).replace(/\/+$/, "");
+}
+
+// ==============================
 // Environment Values
 // ==============================
 
 export const env = {
-  port: getPort(),
+  // ==============================
+  // Runtime
+  // ==============================
+
+  isProduction,
+
+  port:
+    getPort(),
 
   websiteOrigin:
-    requireProductionValue(
-      "WEBSITE_ORIGIN",
-      "http://localhost:3000"
-    ),
+    getWebsiteOrigin(),
+
+  // ==============================
+  // AI Provider
+  // ==============================
+
+  aiProvider,
+
+  // ==============================
+  // Ollama
+  // ==============================
 
   ollamaBaseUrl:
-    requireProductionValue(
-      "OLLAMA_BASE_URL",
-      "http://localhost:11434"
-    ),
+    getOllamaBaseUrl(),
 
   ollamaModel:
-    requireProductionValue(
-      "OLLAMA_MODEL",
-      "qwen3.5:4b"
-    ),
-};
+    getOllamaModel(),
+
+  // ==============================
+  // Groq
+  // ==============================
+
+  groqApiKey:
+    getGroqApiKey(),
+
+  groqModel:
+    getGroqModel(),
+} as const;
