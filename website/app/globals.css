@@ -21,6 +21,13 @@
   --success: #15803d;
   --warning: #b45309;
   --danger: #b91c1c;
+
+  /* ==============================
+     Typography
+  ============================== */
+
+  --base-font-size: 18px;
+  --base-line-height: 1.65;
 }
 
 /* ==============================
@@ -41,13 +48,19 @@
 
 html {
   min-height: 100%;
+
   background: var(--background);
+
+  font-size: var(--base-font-size);
+
   scroll-behavior: smooth;
+
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   min-height: 100vh;
-
   margin: 0;
 
   background: var(--background);
@@ -61,7 +74,11 @@ body {
     "Segoe UI",
     sans-serif;
 
+  font-size: 1rem;
+  line-height: var(--base-line-height);
+
   text-rendering: optimizeLegibility;
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -74,6 +91,27 @@ body {
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+/* ==============================
+   Reduced Motion Accessibility
+============================== */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+
+    transition-duration: 0.01ms !important;
+
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 /* ==============================
@@ -90,6 +128,7 @@ body {
 ============================== */
 
 a {
+  color: inherit;
   text-decoration: none;
 }
 
@@ -113,29 +152,45 @@ button:disabled {
 }
 
 /* ==============================
-   Input Styling
+   Inputs / Textareas / Selects
 ============================== */
 
 input,
 textarea,
 select {
-  color: #0f172a;
+  color: var(--foreground);
 }
 
 input::placeholder,
 textarea::placeholder {
   color: #94a3b8;
+  opacity: 1;
+}
+
+textarea {
+  resize: vertical;
 }
 
 /* ==============================
-   Autofill Fix
+   Autofill Styling
 ============================== */
 
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
-input:-webkit-autofill:focus {
-  -webkit-text-fill-color: #0f172a;
-  transition: background-color 9999s ease-out 0s;
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--foreground);
+
+  caret-color: var(--foreground);
+
+  transition:
+    background-color 9999s ease-out 0s,
+    color 9999s ease-out 0s;
 }
 
 /* ==============================
@@ -143,17 +198,40 @@ input:-webkit-autofill:focus {
 ============================== */
 
 :focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
 /* ==============================
-   Images
+   Media
 ============================== */
 
 img,
 svg {
   display: block;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ==============================
+   Tables
+============================== */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* ==============================
+   Lists
+============================== */
+
+ul,
+ol {
+  padding-left: 1.25rem;
 }
 
 /* ==============================
@@ -181,4 +259,33 @@ svg {
 
 *::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* ==============================
+   Responsive Typography
+============================== */
+
+/*
+ * Desktop/tablet:
+ * 18px base size for improved readability.
+ *
+ * Mobile:
+ * 17px prevents cramped layouts while
+ * remaining larger than the browser default.
+ */
+@media (max-width: 640px) {
+  :root {
+    --base-font-size: 17px;
+    --base-line-height: 1.6;
+  }
+}
+
+/* ==============================
+   Very Small Screens
+============================== */
+
+@media (max-width: 380px) {
+  :root {
+    --base-font-size: 16.5px;
+  }
 }
